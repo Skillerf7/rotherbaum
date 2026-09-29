@@ -31,6 +31,9 @@ class PlaybackService : MediaSessionService() {
         // die UI (EqualizerScreen) direkt erreichbar sind, ohne über
         // den MediaController-Umweg zu müssen.
         val equalizer = EqualizerProcessor()
+
+        // Audio-Session-ID des ExoPlayers (für den Spektrum-Analyzer)
+        @Volatile var audioSessionId: Int = 0
     }
 
     override fun onCreate() {
@@ -44,7 +47,7 @@ class PlaybackService : MediaSessionService() {
             ): AudioSink {
                 return DefaultAudioSink.Builder(context)
                     .setAudioProcessorChain(
-                        DefaultAudioSink.DefaultAudioProcessorChain(arrayOf(equalizer))
+                        DefaultAudioSink.DefaultAudioProcessorChain(equalizer)
                     )
                     .setEnableFloatOutput(enableFloatOutput)
                     .setEnableAudioTrackPlaybackParams(enableAudioTrackPlaybackParams)
@@ -62,6 +65,8 @@ class PlaybackService : MediaSessionService() {
             )
             .setHandleAudioBecomingNoisy(true)
             .build()
+
+        audioSessionId = player.audioSessionId
 
         player.addListener(object : Player.Listener {
             override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {

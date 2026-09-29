@@ -103,7 +103,7 @@ class PlayerViewModel(private val appContext: Context) : ViewModel() {
 
     fun currentPositionMs(): Long = controller?.currentPosition ?: 0L
     fun durationMs(): Long = controller?.duration ?: 0L
-    fun audioSessionId(): Int = controller?.audioSessionId ?: 0
+    fun audioSessionId(): Int = PlaybackService.audioSessionId
 
     class Factory(private val context: Context) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")

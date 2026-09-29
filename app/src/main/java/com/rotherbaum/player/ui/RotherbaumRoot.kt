@@ -11,6 +11,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -309,7 +310,7 @@ private fun LibraryCategoryRoute(
         "artists" -> GroupListScreen("Interpreten", libraryViewModel.byArtist(), { it }, onOpenGroup)
         "albumArtists" -> GroupListScreen("Album-Interpreten", libraryViewModel.byAlbumArtist(), { it }, onOpenGroup)
         "composers" -> GroupListScreen("Komponisten", libraryViewModel.byComposer(), { it }, onOpenGroup)
-        "years" -> GroupListScreen("Jahre", libraryViewModel.byYear(), { it.toString() }, { onOpenGroup(it) })
+        "years" -> GroupListScreen("Jahre", libraryViewModel.byYear(), { it.toString() }, { onOpenGroup(it.toString()) })
         "queue" -> {
             // Warteschlange zeigt schlicht die zuletzt gestartete Wiedergabeliste.
             Text("Warteschlange - aktuell über den Player-Bildschirm sichtbar.", modifier = Modifier.padding(16.dp))
