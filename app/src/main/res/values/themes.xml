@@ -1,0 +1,8 @@
+<resources>
+    <style name="Theme.Rotherbaum" parent="android:Theme.Material.NoActionBar">
+        <item name="android:colorBackground">@color/rb_background</item>
+        <item name="android:statusBarColor">@color/rb_background</item>
+        <item name="android:navigationBarColor">@color/rb_background</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+</resources>
