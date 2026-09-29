@@ -172,13 +172,19 @@ class LibraryViewModel(private val appContext: Context) : ViewModel() {
     fun lowRated(): List<Track> =
         _allTracks.value.filter { (_ratings.value[it.id] ?: 0) < 0 }
 
-    fun search(query: String): List<Track> {
+    fun search(query: String, mode: Int = 0): List<Track> {
         if (query.isBlank()) return emptyList()
         val q = query.trim().lowercase()
         return _allTracks.value.filter {
-            it.title.lowercase().contains(q) ||
-                it.artist.lowercase().contains(q) ||
-                it.album.lowercase().contains(q)
+            when (mode) {
+                1 -> it.album.lowercase().contains(q)
+                2 -> it.artist.lowercase().contains(q)
+                3 -> it.albumArtist.lowercase().contains(q)
+                4 -> it.folder.lowercase().contains(q)
+                else -> it.title.lowercase().contains(q) ||
+                    it.artist.lowercase().contains(q) ||
+                    it.album.lowercase().contains(q)
+            }
         }
     }
 

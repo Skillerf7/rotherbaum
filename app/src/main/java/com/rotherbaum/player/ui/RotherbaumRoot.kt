@@ -3,13 +3,17 @@ package com.rotherbaum.player.ui
 import android.net.Uri
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Equalizer
-import androidx.compose.material.icons.filled.LibraryMusic
+import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import com.rotherbaum.player.ui.theme.RbBackground
+import com.rotherbaum.player.ui.theme.RbSurface
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -36,8 +40,8 @@ import com.rotherbaum.player.ui.search.SearchScreen
 import kotlinx.coroutines.launch
 
 private sealed class BottomTab(val route: String, val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector) {
-    object Library : BottomTab("libraryHome", "Bibliothek", Icons.Filled.LibraryMusic)
-    object Equalizer : BottomTab("equalizer", "EQ", Icons.Filled.Equalizer)
+    object Library : BottomTab("libraryHome", "Bibliothek", Icons.Filled.GridView)
+    object Equalizer : BottomTab("equalizer", "EQ", Icons.Filled.BarChart)
     object Search : BottomTab("search", "Suche", Icons.Filled.Search)
     object More : BottomTab("more", "Mehr", Icons.Filled.Menu)
 }
@@ -70,35 +74,58 @@ fun RotherbaumRoot() {
         playerViewModel.playQueue(tracks, index)
     }
 
+    val volume by playerViewModel.volume.collectAsState()
+    val speed by playerViewModel.speed.collectAsState()
+
     Scaffold(
+        containerColor = RbBackground,
         bottomBar = {
-            Column {
-                currentTrack?.let { track ->
-                    MiniPlayerBar(
-                        track = track,
-                        isPlaying = isPlaying,
-                        onTogglePlayPause = { playerViewModel.togglePlayPause() },
-                        onClick = { navController.navigate("player") }
-                    )
-                }
+            val backStackEntry by navController.currentBackStackEntryAsState()
+            val currentRoute = backStackEntry?.destination?.route
 
-                val backStackEntry by navController.currentBackStackEntryAsState()
-                val currentRoute = backStackEntry?.destination?.route
+            Surface(
+                color = RbSurface,
+                shape = RoundedCornerShape(28.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 10.dp, vertical = 8.dp)
+            ) {
+                Column {
+                    if (currentRoute != "player") {
+                        currentTrack?.let { track ->
+                            MiniPlayerBar(
+                                track = track,
+                                isPlaying = isPlaying,
+                                currentPositionMs = { playerViewModel.currentPositionMs() },
+                                durationMs = { playerViewModel.durationMs() },
+                                onTogglePlayPause = { playerViewModel.togglePlayPause() },
+                                onClick = { navController.navigate("player") }
+                            )
+                        }
+                    }
 
-                NavigationBar {
-                    bottomTabs.forEach { tab ->
-                        NavigationBarItem(
-                            selected = currentRoute == tab.route,
-                            onClick = {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 10.dp),
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        bottomTabs.forEach { tab ->
+                            IconButton(onClick = {
                                 navController.navigate(tab.route) {
                                     popUpTo(BottomTab.Library.route) { saveState = true }
                                     launchSingleTop = true
                                     restoreState = true
                                 }
-                            },
-                            icon = { Icon(tab.icon, contentDescription = tab.label) },
-                            label = { Text(tab.label) }
-                        )
+                            }) {
+                                Icon(
+                                    tab.icon,
+                                    contentDescription = tab.label,
+                                    tint = if (currentRoute == tab.route) Color.White else Color(0xFF8A8A8A),
+                                    modifier = Modifier.size(30.dp)
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -180,13 +207,17 @@ fun RotherbaumRoot() {
                     },
                     onLoadPreset = { preset ->
                         PlaybackService.equalizer.applyPreset(preset)
-                    }
+                    },
+                    volume = volume,
+                    speed = speed,
+                    onVolumeChange = { playerViewModel.setVolume(it) },
+                    onSpeedChange = { playerViewModel.setSpeed(it) }
                 )
             }
 
             composable(BottomTab.Search.route) {
                 SearchScreen(
-                    search = { libraryViewModel.search(it) },
+                    search = { query, mode -> libraryViewModel.search(query, mode) },
                     favoriteIds = favoriteIds,
                     onTrackClick = { track, list -> playTracks(list, track) },
                     onToggleFavorite = { libraryViewModel.toggleFavorite(it.id) },
@@ -238,7 +269,10 @@ fun RotherbaumRoot() {
                     onSeekTo = { playerViewModel.seekTo(it) },
                     onToggleShuffle = { playerViewModel.toggleShuffle() },
                     onCycleRepeat = { playerViewModel.cycleRepeatMode() },
-                    onRate = { rating -> currentTrack?.let { libraryViewModel.setRating(it.id, rating) } }
+                    onRate = { rating -> currentTrack?.let { libraryViewModel.setRating(it.id, rating) } },
+                    onOpenEqualizer = {
+                        navController.navigate(BottomTab.Equalizer.route) { launchSingleTop = true }
+                    }
                 )
             }
         }

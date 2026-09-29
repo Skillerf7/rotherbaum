@@ -34,6 +34,12 @@ class PlayerViewModel(private val appContext: Context) : ViewModel() {
     private val _repeatMode = MutableStateFlow(Player.REPEAT_MODE_OFF)
     val repeatMode: StateFlow<Int> = _repeatMode
 
+    private val _volume = MutableStateFlow(1f)
+    val volume: StateFlow<Float> = _volume
+
+    private val _speed = MutableStateFlow(1f)
+    val speed: StateFlow<Float> = _speed
+
     init {
         val sessionToken = SessionToken(
             appContext, ComponentName(appContext, PlaybackService::class.java)
@@ -88,6 +94,16 @@ class PlayerViewModel(private val appContext: Context) : ViewModel() {
     fun next() = controller?.seekToNextMediaItem()
     fun previous() = controller?.seekToPreviousMediaItem()
     fun seekTo(positionMs: Long) { controller?.seekTo(positionMs) }
+
+    fun setVolume(value: Float) {
+        _volume.value = value.coerceIn(0f, 1f)
+        controller?.volume = _volume.value
+    }
+
+    fun setSpeed(value: Float) {
+        _speed.value = value.coerceIn(0.5f, 2f)
+        controller?.setPlaybackSpeed(_speed.value)
+    }
 
     fun toggleShuffle() { controller?.let { it.shuffleModeEnabled = !it.shuffleModeEnabled } }
 

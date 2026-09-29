@@ -1,21 +1,47 @@
 package com.rotherbaum.player.ui.player
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
+import androidx.compose.material.icons.filled.FastForward
+import androidx.compose.material.icons.filled.FastRewind
+import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Repeat
+import androidx.compose.material.icons.filled.RepeatOne
+import androidx.compose.material.icons.filled.Shuffle
+import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.SkipPrevious
+import androidx.compose.material.icons.filled.ThumbDown
+import androidx.compose.material.icons.filled.ThumbUp
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.rotherbaum.player.data.MusicRepository
 import com.rotherbaum.player.data.Track
-import androidx.compose.material3.Icon as M3Icon
+import com.rotherbaum.player.ui.components.RbIconPill
+import com.rotherbaum.player.ui.components.WaveSeekBar
 import kotlinx.coroutines.delay
+
+private val Inactive = Color(0xFF8A8A8A)
 
 @Composable
 fun PlayerScreen(
@@ -32,125 +58,203 @@ fun PlayerScreen(
     onSeekTo: (Long) -> Unit,
     onToggleShuffle: () -> Unit,
     onCycleRepeat: () -> Unit,
-    onRate: (Int) -> Unit
+    onRate: (Int) -> Unit,
+    onOpenEqualizer: () -> Unit
 ) {
     if (track == null) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("Kein Titel wird abgespielt.")
+            Text("Kein Titel wird abgespielt.", color = Color.White)
         }
         return
     }
 
-    var sliderPosition by remember { mutableStateOf(0f) }
-    var isDragging by remember { mutableStateOf(false) }
+    var position by remember { mutableStateOf(0L) }
 
     LaunchedEffect(track.id) {
         while (true) {
-            if (!isDragging) sliderPosition = currentPositionMs().toFloat()
-            delay(500)
+            position = currentPositionMs()
+            delay(400)
         }
     }
 
-    Column(
+    val duration = durationMs().coerceAtLeast(1L)
+    val fraction = (position.toFloat() / duration.toFloat()).coerceIn(0f, 1f)
+
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+            .background(
+                Brush.verticalGradient(
+                    listOf(Color(0xFF4A423C), Color(0xFF151515), Color(0xFF050505))
+                )
+            )
     ) {
-        Spacer(modifier = Modifier.height(24.dp))
-
-        AsyncImage(
-            model = MusicRepository.albumArtUri(track.albumId),
-            contentDescription = null,
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(1f)
-                .clip(RoundedCornerShape(16.dp))
-        )
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Text(track.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-        Text(
-            "${track.artist} · ${track.album}",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        val duration = durationMs().coerceAtLeast(1L).toFloat()
-        Slider(
-            value = sliderPosition.coerceIn(0f, duration),
-            valueRange = 0f..duration,
-            onValueChange = { isDragging = true; sliderPosition = it },
-            onValueChangeFinished = { isDragging = false; onSeekTo(sliderPosition.toLong()) }
-        )
-
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(formatMs(sliderPosition.toLong()), style = MaterialTheme.typography.labelSmall)
-            Text(formatMs(duration.toLong()), style = MaterialTheme.typography.labelSmall)
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp)
         ) {
-            IconButton(onClick = onToggleShuffle) {
-                M3Icon(
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Box(modifier = Modifier.fillMaxWidth()) {
+                AsyncImage(
+                    model = MusicRepository.albumArtUri(track.albumId),
+                    contentDescription = null,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(1f)
+                        .clip(RoundedCornerShape(28.dp))
+                        .background(Color(0xFF1C1C1C))
+                )
+                Row(
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    RbIconPill(
+                        Icons.Filled.ThumbUp,
+                        tint = if (rating == 1) Color.White else Inactive,
+                        onClick = { onRate(if (rating == 1) 0 else 1) }
+                    )
+                    RbIconPill(
+                        Icons.Filled.ThumbDown,
+                        tint = if (rating == -1) Color.White else Inactive,
+                        onClick = { onRate(if (rating == -1) 0 else -1) }
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            Text(
+                track.title,
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                fontSize = 26.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(Color(0x66000000))
+                    .padding(horizontal = 14.dp, vertical = 8.dp)
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                track.artist,
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                fontSize = 20.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(Color(0x66000000))
+                    .padding(horizontal = 14.dp, vertical = 6.dp)
+            )
+
+            Spacer(modifier = Modifier.height(18.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                RbIconPill(Icons.Filled.GraphicEq, tint = Inactive, onClick = onOpenEqualizer)
+                Spacer(modifier = Modifier.weight(1f))
+                RbIconPill(
+                    if (repeatMode == 1) Icons.Filled.RepeatOne else Icons.Filled.Repeat,
+                    tint = if (repeatMode != 0) Color.White else Inactive,
+                    onClick = onCycleRepeat
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                RbIconPill(
                     Icons.Filled.Shuffle,
-                    contentDescription = "Shuffle",
-                    tint = if (shuffleEnabled) MaterialTheme.colorScheme.primary else LocalContentColor.current
+                    tint = if (shuffleEnabled) Color.White else Inactive,
+                    onClick = onToggleShuffle
                 )
             }
-            IconButton(onClick = onPrevious) {
-                M3Icon(Icons.Filled.SkipPrevious, contentDescription = "Zurück", modifier = Modifier.size(36.dp))
-            }
-            FilledIconButton(onClick = onTogglePlayPause, modifier = Modifier.size(64.dp)) {
-                M3Icon(
-                    if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                    contentDescription = "Play/Pause",
-                    modifier = Modifier.size(32.dp)
-                )
-            }
-            IconButton(onClick = onNext) {
-                M3Icon(Icons.Filled.SkipNext, contentDescription = "Weiter", modifier = Modifier.size(36.dp))
-            }
-            IconButton(onClick = onCycleRepeat) {
-                M3Icon(
-                    when (repeatMode) {
-                        1 -> Icons.Filled.RepeatOne // Player.REPEAT_MODE_ONE
-                        2 -> Icons.Filled.Repeat    // Player.REPEAT_MODE_ALL (Farbe zeigt aktiv an)
-                        else -> Icons.Filled.Repeat
-                    },
-                    contentDescription = "Repeat",
-                    tint = if (repeatMode != 0) MaterialTheme.colorScheme.primary else LocalContentColor.current
-                )
-            }
-        }
 
-        Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
-        Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
-            IconButton(onClick = { onRate(if (rating == 1) 0 else 1) }) {
-                M3Icon(
-                    Icons.Filled.ThumbUp,
-                    contentDescription = "Gut bewerten",
-                    tint = if (rating == 1) MaterialTheme.colorScheme.primary else LocalContentColor.current
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(190.dp)
+            ) {
+                WaveSeekBar(
+                    seed = track.id,
+                    fraction = fraction,
+                    onSeek = { onSeekTo((it * duration.toFloat()).toLong()) },
+                    modifier = Modifier.fillMaxSize()
                 )
+                Row(
+                    modifier = Modifier.align(Alignment.Center),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    RoundControl(Icons.Filled.SkipPrevious, 46.dp, onPrevious)
+                    RoundControl(Icons.Filled.FastRewind, 66.dp) {
+                        onSeekTo((position - 10_000L).coerceAtLeast(0L))
+                    }
+                    RoundControl(
+                        if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                        92.dp,
+                        onTogglePlayPause
+                    )
+                    RoundControl(Icons.Filled.FastForward, 66.dp) {
+                        onSeekTo((position + 10_000L).coerceAtMost(duration))
+                    }
+                    RoundControl(Icons.Filled.SkipNext, 46.dp, onNext)
+                }
             }
-            IconButton(onClick = { onRate(if (rating == -1) 0 else -1) }) {
-                M3Icon(
-                    Icons.Filled.ThumbDown,
-                    contentDescription = "Schlecht bewerten",
-                    tint = if (rating == -1) MaterialTheme.colorScheme.primary else LocalContentColor.current
-                )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                TimePill(formatMs(position))
+                TimePill(formatMs(duration))
             }
+
+            Spacer(modifier = Modifier.height(24.dp))
         }
     }
+}
+
+@Composable
+private fun RoundControl(icon: ImageVector, diameter: Dp, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .size(diameter)
+            .clip(CircleShape)
+            .background(Color.Black)
+            .clickable { onClick() },
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            icon,
+            contentDescription = null,
+            tint = Color.White,
+            modifier = Modifier.size(diameter * 0.45f)
+        )
+    }
+}
+
+@Composable
+private fun TimePill(text: String) {
+    Text(
+        text,
+        color = Color.White,
+        fontWeight = FontWeight.Bold,
+        fontSize = 18.sp,
+        modifier = Modifier
+            .clip(RoundedCornerShape(50))
+            .background(Color.Black)
+            .padding(horizontal = 14.dp, vertical = 8.dp)
+    )
 }
 
 private fun formatMs(ms: Long): String {
